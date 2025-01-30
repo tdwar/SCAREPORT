@@ -1,8 +1,10 @@
 Test failure, method: SecAPIScanControllerTest.testGetSECAPIScoreCardFailed -- System.AuraHandledException: Error occured during 3rd Callout. Exception Cause : null at Line No. 467 Error Message : Update failed. First exception on row 0 with id a3p7x000000KKxBAAW; first error: INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST, SecAPI Scan Status: bad value for restricted picklist field: Failed: [SEC_API_Scan_Status__c] stack Class.SecAPIScanController.getSECAPIScoreCard: line 472, column 1 Class.SecAPIScanControllerTest.testGetSECAPIScoreCardFailed: line 82, column 1
 Test failure, method: SecAPIScanControllerTest.testRunSecAPIStatusCheckError -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIScanController.runSecAPIStatusCheck: line 400, column 1 Class.SecAPIScanControllerTest.testRunSecAPIStatusCheckError: line 50, column 1
 Test failure, method: SecAPIScanControllerTest.testSCAScanErrorHandling -- System.AssertException: Assertion Failed: Exception message should indicate the error during SCA Scan. stack Class.SecAPIScanControllerTest.testSCAScanErrorHandling: line 220, column 1
-Test failure, method: SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.getReleaseDetails: line 51, column 1 Class.SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess: line 96, column 1
-Test failure, method: SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.runSecAPIStatusCheck: line 899, column 1 Class.SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail: line 266, column 1
+Test failure, method: SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.getReleaseDetails: line 51, column 1 Class.SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess: line 98, column 1
+Test failure, method: SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.runSecAPIStatusCheck: line 901, column 1 Class.SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail: line 268, column 1
+
+
 
 @isTest
 static void testRunSecAPIStatusCheckFail() {
