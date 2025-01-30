@@ -3,7 +3,7 @@ Test failure, method: SecAPIScanControllerTest.testRunSecAPIStatusCheckError -- 
 Test failure, method: SecAPIScanControllerTest.testSCAScanErrorHandling -- System.AssertException: Assertion Failed: Exception message should indicate the error during SCA Scan. stack Class.SecAPIScanControllerTest.testSCAScanErrorHandling: line 220, column 1
 Test failure, method: SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.getReleaseDetails: line 51, column 1 Class.SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess: line 98, column 1
 Test failure, method: SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.runSecAPIStatusCheck: line 901, column 1 Class.SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail: line 268, column 1
-
+[Layout SEC_API_Scan_Result__c-SEC API Scan Result Layout] Field: field, value:SecApiGrade__c appears more than once
 
 
 @isTest
