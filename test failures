@@ -5,6 +5,27 @@ Test failure, method: SecAPIReleaseScanController_Test.testGetReleaseDetailsSucc
 Test failure, method: SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.runSecAPIStatusCheck: line 901, column 1 Class.SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail: line 268, column 1
 [Layout SEC_API_Scan_Result__c-SEC API Scan Result Layout] Field: field, value:SecApiGrade__c appears more than once
 
+@isTest
+static void setUpMethod() {
+    Copado_Integration_Setting__c cis1 = new Copado_Integration_Setting__c(
+        name = 'JIRA', external_system__c = 'JIRA', Named_Credential__c = 'Test_JIRA'
+    );
+    insert cis1;
+
+    copado__Project__c pro1 = new copado__Project__c(
+        name = 'MY JIRA Project', 
+        Project_External_Id__c = 'MTP',
+        Copado_Integration_Setting__c = cis1.id,
+        enable_logs__c = true
+    );
+    insert pro1;
+
+    copado__Release__c releaseRec = new copado__Release__c(
+        Name = 'Test Release', copado__Version__c = '2.0'
+    );
+    insert releaseRec;
+}
+
 
 @isTest
 static void testRunSecAPIStatusCheckFail() {
