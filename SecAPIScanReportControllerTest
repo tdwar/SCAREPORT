@@ -1,0 +1,84 @@
+/******************************************************************************************************************************
+Apex Class Name  : SecAPIScanReportControllerTest
+Version          : 1.0 
+Created Date     : 27/05/2021
+Function         : 
+
+Modification Log :
+* Developer                       Date                 Description
+* -----------------------------------------------------------------------------------------------------------------------------------------------------------------------                
+* Vaibhav Tripathi               27/05/2021          This Test class controller use to get Sec API scan Report pd save in attachment and redirect it.
+
+***************************************************************************************************************************************************************************/
+@isTest
+public class SecAPIScanReportControllerTest {
+    @testSetup static void methodName() {
+        Copado_Integration_Setting__c cis1 = new Copado_Integration_Setting__c(name = 'JIRA', external_system__c = 'JIRA', Named_Credential__c = 'Test_JIRA');
+        insert cis1;
+        
+        copado__Project__c pro1 = new copado__Project__c(name = 'MY JIRA Project', Project_External_Id__c = 'MTP', Copado_Integration_Setting__c = cis1.id, enable_logs__c = true,Workspace_Id__c = 'a404576b-7158-4661-9e93-19be9d8e3025',App_Id__c='Test');
+        insert pro1;
+        
+        copado__User_Story__c userStory = new copado__User_Story__c(No_Priority_1_Violation__c=true,copado__Pull_Requests_Approved__c=true,copado__Project__c =  pro1.id);        
+        insert userStory; 
+        
+        Sec_Api_Scan_Result__c secRes = new Sec_Api_Scan_Result__c(copado_user_story__c = userStory.id, Pdf_Report__c = '/pdf/1212121');
+        insert secRes;
+        Sec_Api_Scan_Result__c secRes1 = new Sec_Api_Scan_Result__c(copado_user_story__c = userStory.id);
+        insert secRes1;
+        
+        Attachment attachRes =  new Attachment(Name = 'Test Attachment for Parent', ParentId = secRes.Id,Body = Blob.valueOf('Test Data'));
+        insert attachRes;
+    }
+    
+    @isTest static void testRunSecAPIScanReport(){
+        Sec_Api_Scan_Result__c srItem = [Select id,Pdf_Report__c, copado_user_story__c from Sec_Api_Scan_Result__c limit 1];
+        Attachment attachRec = [Select Id from Attachment limit 1];
+        String recordId = srItem.Id;
+        Test.startTest();
+        ApexPages.currentPage().getParameters().put('id',srItem.Id); 
+		SecApiMockHttpResponseGenerator fakeresponse = new SecApiMockHttpResponseGenerator(200, 'Complete', '{"jsonReport": "https://test.com","pdfReport": "https://test.com","xmlReport": "https://test.com","scoreCard": "https://test.com","status": "FINISHED","submitedDateTime": "Monday, 01 01 2020 01:01:01","message": "test"}', null);
+        Test.setMock(HttpCalloutMock.class, fakeResponse);
+        SecAPIScanReportController reportCtrl = new SecAPIScanReportController();
+        reportCtrl.getSecAPIScanReport();
+        Blob pdfFile = Blob.valueof('Test File');
+        reportCtrl.createAttachment(pdfFile,recordId,'application/pdf','TestReportName');
+        System.assertEquals(recordId,srItem.Id,'recordId is Present');
+        System.assertEquals(1,[Select Id from Attachment where parentId=:recordId].size(),'one attachment inserted');
+        Test.stopTest();
+    }
+	@isTest static void testRunSecAPIScanReport2(){
+        Sec_Api_Scan_Result__c srItem = [Select id,Pdf_Report__c, copado_user_story__c from Sec_Api_Scan_Result__c limit 1];
+        Attachment attachRec = [Select Id from Attachment limit 1];
+        String recordId = srItem.Id;
+        Test.startTest();
+        ApexPages.currentPage().getParameters().put('id',srItem.Id); 
+		SecApiMockHttpResponseGenerator fakeresponse = new SecApiMockHttpResponseGenerator(201, 'Complete', '{"jsonReport": "https://test.com","pdfReport": "https://test.com","xmlReport": "https://test.com","scoreCard": "https://test.com","status": "FINISHED","submitedDateTime": "Monday, 01 01 2020 01:01:01","message": "test"}', null);
+        Test.setMock(HttpCalloutMock.class, fakeResponse);
+        SecAPIScanReportController reportCtrl = new SecAPIScanReportController();
+        reportCtrl.getSecAPIScanReport();
+        Blob pdfFile = Blob.valueof('Test File');
+        reportCtrl.createAttachment(pdfFile,recordId,'application/pdf','TestReportName');
+        System.assertEquals(recordId,srItem.Id,'recordId is Present');
+        System.assertEquals(1,[Select Id from Attachment where parentId=:recordId].size(),'one attachment inserted');
+        Test.stopTest();
+    }
+    @isTest static void testRunSecAPIScanReportWithError(){
+        Sec_Api_Scan_Result__c srItem = [Select id,Pdf_Report__c, copado_user_story__c from Sec_Api_Scan_Result__c where Pdf_Report__c = null limit 1];
+        String recordId = srItem.Id;
+        Test.startTest();
+        SecAPIScanReportController reportCtrl = new SecAPIScanReportController();
+        reportCtrl.getSecAPIScanReport();
+        System.assertEquals(1,[Select id from Sec_Api_Scan_Result__c where id=:recordId and Pdf_Report__c = null].size(),'one srItem');
+        Test.stopTest();
+    }
+    @isTest static void testRunSecAPIScanReportError(){
+        String recordId = '';
+        Test.startTest();
+        SecAPIScanReportController reportCtrl = new SecAPIScanReportController();
+        reportCtrl.getSecAPIScanReport();
+        reportCtrl.createAttachment(null,recordId,'application/pdf','TestReportName');
+        System.assertEquals('',recordId,'recordId is not Present');
+        Test.stopTest();
+    }
+}
