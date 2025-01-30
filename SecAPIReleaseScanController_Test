@@ -90,7 +90,9 @@ public class SecAPIReleaseScanController_Test {
     @isTest
     static void testGetReleaseDetailsSuccess() {
         // Positive test case for getReleaseDetails
-        copado__Release__c releaseRec = [SELECT Id FROM copado__Release__c LIMIT 1];
+        copado__Release__c releaseRec = new copado__Release__c(Name = 'Test Release',copado__Version__c = '1.0',SecApiScanProjectCounter__c = 2,CurrentScanCount__c = 1,Current_SAST_Run_Status__c = 'Pending',Current_SCA_Run_Status__c = 'Pending');
+        insert releaseRec;
+        //copado__Release__c releaseRec = [SELECT Id FROM copado__Release__c LIMIT 1];
 
         Test.startTest();
         copado__Release__c result = SecAPIReleaseScanController.getReleaseDetails(releaseRec.Id);
@@ -261,7 +263,7 @@ public class SecAPIReleaseScanController_Test {
         copado__Release__c releaseRec =[Select id From copado__Release__c Limit 1];
         Test.startTest();
         
-        SecApiMockHttpResponseGenerator fakeresponse = new SecApiMockHttpResponseGenerator(400, 'Complete', '{}', null);
+        SecApiMockHttpResponseGenerator fakeresponse = new SecApiMockHttpResponseGenerator(400, 'Error', '{}', null);
         Test.setMock(HttpCalloutMock.class, fakeResponse);
         SecAPIReleaseScanController.runSecAPIStatusCheck('abc',releaseRec.Id);
         System.assertEquals('Failed',[select id,SEC_API_Scan_Status__c from copado__Release__c where id =:releaseRec.id].sec_api_scan_status__c);
