@@ -1,0 +1,69 @@
+@isTest
+public class SCAScanReportControllerTest {
+    @testSetup static void setupTestData() {
+        Copado_Integration_Setting__c cis1 = new Copado_Integration_Setting__c(name = 'JIRA', external_system__c = 'JIRA', Named_Credential__c = 'Test_JIRA');
+        insert cis1;
+        
+        copado__Project__c pro1 = new copado__Project__c(name = 'MY JIRA Project', Project_External_Id__c = 'MTP', Copado_Integration_Setting__c = cis1.id, enable_logs__c = true,Workspace_Id__c = 'a404576b-7158-4661-9e93-19be9d8e3025',App_Id__c='Test');
+        insert pro1;
+        
+        copado__User_Story__c userStory = new copado__User_Story__c(No_Priority_1_Violation__c=true,copado__Pull_Requests_Approved__c=true,copado__Project__c =  pro1.id);        
+        insert userStory; 
+        
+        Sec_Api_Scan_Result__c scaRes = new Sec_Api_Scan_Result__c(copado_user_story__c = userStory.id, SCA_Pdf_Report__c = '/pdf/1212121');
+        insert scaRes;
+        Sec_Api_Scan_Result__c scaRes1 = new Sec_Api_Scan_Result__c(copado_user_story__c = userStory.id);
+        insert scaRes1;
+        
+        Attachment attachRes =  new Attachment(Name = 'Test Attachment for Parent', ParentId = scaRes.Id, Body = Blob.valueOf('Test Data'));
+        insert attachRes;
+    }
+    
+    @isTest static void testRunSCAScanReport() {
+        Sec_Api_Scan_Result__c srItem = [Select id, SCA_Pdf_Report__c, copado_user_story__c from Sec_Api_Scan_Result__c limit 1];
+        String recordId = srItem.Id;
+        Test.startTest();
+        ApexPages.currentPage().getParameters().put('SCAid', srItem.Id); 
+        SecApiMockHttpResponseGenerator fakeResponse = new SecApiMockHttpResponseGenerator(200, 'Complete', '{"jsonReport": "https://test.com","pdfReport": "https://test.com"}', null);
+        Test.setMock(HttpCalloutMock.class, fakeResponse);
+        SCAScanReportController reportCtrl = new SCAScanReportController();
+        reportCtrl.getSCAScanReport();
+        Blob pdfFile = Blob.valueof('Test File');
+        reportCtrl.createAttachment(pdfFile, recordId, 'application/pdf', 'TestReportName');
+        System.assertEquals(recordId, srItem.Id, 'recordId is Present');
+        System.assertEquals(1, [Select Id from Attachment where parentId=:recordId].size(), 'one attachment inserted');
+        Test.stopTest();
+    }
+    
+    @isTest static void testRunSCAScanReportWithError() {
+        Sec_Api_Scan_Result__c srItem = [Select id, SCA_Pdf_Report__c, copado_user_story__c from Sec_Api_Scan_Result__c where SCA_Pdf_Report__c = null limit 1];
+        String recordId = srItem.Id;
+        Test.startTest();
+        SCAScanReportController reportCtrl = new SCAScanReportController();
+        reportCtrl.getSCAScanReport();
+        System.assertEquals(1, [Select id from Sec_Api_Scan_Result__c where id=:recordId and SCA_Pdf_Report__c = null].size(), 'one srItem');
+        Test.stopTest();
+    }
+    
+    @isTest static void testRunSCAScanReportError() {
+        String recordId = '';
+        Test.startTest();
+        SCAScanReportController reportCtrl = new SCAScanReportController();
+        reportCtrl.getSCAScanReport();
+        reportCtrl.createAttachment(null, recordId, 'application/pdf', 'TestReportName');
+        System.assertEquals('', recordId, 'recordId is not Present');
+        Test.stopTest();
+    }
+    
+    @isTest static void testCreateAttachment() {
+        Sec_Api_Scan_Result__c srItem = [SELECT Id FROM Sec_Api_Scan_Result__c LIMIT 1];
+        String recordId = srItem.Id;
+        Blob pdfFile = Blob.valueOf('Test File');
+        Test.startTest();
+        SCAScanReportController reportCtrl = new SCAScanReportController();
+        String attachmentId = reportCtrl.createAttachment(pdfFile, recordId, 'application/pdf', 'TestReportName');
+        System.assertNotEquals(null, attachmentId, 'Attachment should be created');
+        System.assertEquals(1, [SELECT Id FROM Attachment WHERE ParentId = :recordId].size(), 'Attachment count mismatch');
+        Test.stopTest();
+    }
+}
