@@ -1,3 +1,78 @@
 Test failure, method: SecAPIScanControllerTest.testGetSECAPIScoreCardFailed -- System.AuraHandledException: Error occured during 3rd Callout. Exception Cause : null at Line No. 467 Error Message : Update failed. First exception on row 0 with id a3p7x000000KKxBAAW; first error: INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST, SecAPI Scan Status: bad value for restricted picklist field: Failed: [SEC_API_Scan_Status__c] stack Class.SecAPIScanController.getSECAPIScoreCard: line 472, column 1 Class.SecAPIScanControllerTest.testGetSECAPIScoreCardFailed: line 82, column 1
 Test failure, method: SecAPIScanControllerTest.testRunSecAPIStatusCheckError -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIScanController.runSecAPIStatusCheck: line 400, column 1 Class.SecAPIScanControllerTest.testRunSecAPIStatusCheckError: line 50, column 1
 Test failure, method: SecAPIScanControllerTest.testSCAScanErrorHandling -- System.AssertException: Assertion Failed: Exception message should indicate the error during SCA Scan. stack Class.SecAPIScanControllerTest.testSCAScanErrorHandling: line 220, column 1
+
+@AuraEnabled
+    public Static String getSECAPIScoreCard(String scoreCardURL, String userStoryId) {
+        Boolean failScan;
+        String scanType ='';
+        String resp = '';
+        SECAPIParser scparser;
+        SEC_API_Scan_Result__c sr;
+        String endUrl = '/score/'+scoreCardURL;
+        List<copado__User_Story__c> toUpdateUserStories = new List<copado__User_Story__c>();
+        copado__User_Story__c us1 = new copado__User_Story__c();
+        HTTPResponse res = new HTTPResponse();
+        try{
+            res =  getCalloutResponse(endURL,'GET',null);
+            List<SEC_API_Scan_Result__c> srList = getScanResultRecord(userStoryId);
+            if(res.getStatusCode() == 200){
+                scparser = (SECAPIParser)JSON.deserialize(res.getBody(), SECAPIParser.class);
+                if(!srList.isEmpty()){
+                    sr = srList[0];
+                    sr.Critical__c = scparser.critical!=null?Decimal.valueOf(scparser.critical):0;
+                    sr.High__c = scparser.high!=null?Decimal.valueOf(scparser.high):0;
+                    sr.Medium__c = scparser.medium!=null?Decimal.valueOf(scparser.medium):0;
+                    sr.Low__c = scparser.low!=null?Decimal.valueOf(scparser.low):0;
+                    sr.Copado_User_Story__c = userStoryId;
+                    sr.Scan_Type__c = scparser.scanType;
+                    sr.Req_Id__c = scparser.reqId;
+                    if (sr.Critical__c != 0 || sr.High__c != 0 || sr.Medium__c != 0 ) {
+                        sr.FailScan__c = true;
+                    }else {
+                        sr.FailScan__c = false;
+                    }
+                    sr.Scan_Status__c = 'Callout 3 Completed';
+                    if(scparser.lastUpdated != null && scparser.lastUpdated != '')
+                        sr.Last_Updated__c = convertStringtoDateTime(scparser.lastUpdated);
+                    us1 = NEW copado__User_Story__c(Id=userStoryId,SEC_API_Scan_Status__c='Completed');
+                    Boolean scaApplicable = SCARequired(us1.Id);
+                    if(scaApplicable == false){
+                         if(sr.FailScan__c == false  ){
+                     us1.SecAPI_Scan_Passed__c  = true;
+                      }
+                    else{
+                        us1.SecAPI_Scan_Passed__c  = false;
+                   
+                     }
+                     }
+                }
+            }
+            
+            else{
+                if(!srList.isEmpty()){
+                    sr = srList[0];
+                    sr.Scan_Status__c = 'Callout 3 Failed';
+                    sr.Error_Message__c = 'Status Code '+res.getStatusCode() +', Error Message '+res.getBody();
+                    us1 = NEW copado__User_Story__c(Id=userStoryId,SEC_API_Scan_Status__c='Failed');
+                    resp = 'Error occured during 3rd Callout. Response Status Code : ' +res.getStatusCode()+ ', Response Status : ' + res.getStatus()+', Response Message : ' + res.getBody();
+                }
+            }
+            if(sr != null && Schema.sObjectType.SEC_API_Scan_Result__c.isUpdateable()){
+                update sr;
+            }
+           toUpdateUserStories.add(us1);
+            if(!toUpdateUserStories.isEmpty() && Schema.sObjectType.copado__User_Story__c.isUpdateable()){
+                   update toUpdateUserStories;
+            }
+            
+        }catch(Exception e){
+            system.debug('exception '+e +e.getCause()+e.getLineNumber()+e.getMessage());
+            AuraHandledException ae = new AuraHandledException('The string must be at least 5 characters in length');
+            ae.setMessage('Error occured during 3rd Callout. Exception Cause : ' + +e.getCause()+ ' at Line No. ' + e.getLineNumber()+' Error Message : '+e.getMessage());
+            throw ae;
+           
+        }
+        return resp;
+    }
+    
