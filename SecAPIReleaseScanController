@@ -1,3 +1,11 @@
+if (!lstSecScanResults.isEmpty() && Schema.sObjectType.SEC_API_Scan_Result__c.isUpdateable()) {
+    update lstSecScanResults;
+} else {
+    throw new AuraHandledException('Error: Insufficient permissions to update SEC_API_Scan_Result__c records.');
+}
+
+
+
 /******************************************************************************************************************************
 Apex Class Name  : SecAPIReleaseScanController
 Version          : 1.0 
