@@ -1,8 +1,9 @@
 if (!lstSecScanResults.isEmpty() && Schema.sObjectType.SEC_API_Scan_Result__c.isUpdateable()) {
     update lstSecScanResults;
 } else {
-    throw new AuraHandledException('Error: Insufficient permissions to update SEC_API_Scan_Result__c records.');
+    throw new AuraHandledException('User does not have permission to update SEC_API_Scan_Result__c records.');
 }
+
 
 if (Schema.sObjectType.SEC_API_Scan_Result__c.fields.Id.isUpdateable()) {
     sr.Id = recordId;
