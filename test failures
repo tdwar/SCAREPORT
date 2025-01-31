@@ -1,206 +1,40 @@
-Test failure, method: SecAPIScanControllerTest.testGetSECAPIScoreCardFailed -- System.AuraHandledException: Error occured during 3rd Callout. Exception Cause : null at Line No. 467 Error Message : Update failed. First exception on row 0 with id a3p7x000000KKxBAAW; first error: INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST, SecAPI Scan Status: bad value for restricted picklist field: Failed: [SEC_API_Scan_Status__c] stack Class.SecAPIScanController.getSECAPIScoreCard: line 472, column 1 Class.SecAPIScanControllerTest.testGetSECAPIScoreCardFailed: line 82, column 1
-Test failure, method: SecAPIScanControllerTest.testRunSecAPIStatusCheckError -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIScanController.runSecAPIStatusCheck: line 400, column 1 Class.SecAPIScanControllerTest.testRunSecAPIStatusCheckError: line 50, column 1
-Test failure, method: SecAPIScanControllerTest.testSCAScanErrorHandling -- System.AssertException: Assertion Failed: Exception message should indicate the error during SCA Scan. stack Class.SecAPIScanControllerTest.testSCAScanErrorHandling: line 220, column 1
-Test failure, method: SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.getReleaseDetails: line 51, column 1 Class.SecAPIReleaseScanController_Test.testGetReleaseDetailsSuccess: line 98, column 1
-Test failure, method: SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail -- System.AuraHandledException: Script-thrown exception stack Class.SecAPIReleaseScanController.runSecAPIStatusCheck: line 901, column 1 Class.SecAPIReleaseScanController_Test.testRunSecAPIStatusCheckFail: line 268, column 1
-[Layout SEC_API_Scan_Result__c-SEC API Scan Result Layout] Field: field, value:SecApiGrade__c appears more than once
-
 @isTest
-static void setUpMethod() {
-    Copado_Integration_Setting__c cis1 = new Copado_Integration_Setting__c(
-        name = 'JIRA', external_system__c = 'JIRA', Named_Credential__c = 'Test_JIRA'
-    );
-    insert cis1;
+public class SecAPIScanControllerTest {
 
-    copado__Project__c pro1 = new copado__Project__c(
-        name = 'MY JIRA Project', 
-        Project_External_Id__c = 'MTP',
-        Copado_Integration_Setting__c = cis1.id,
-        enable_logs__c = true
-    );
-    insert pro1;
-
-    copado__Release__c releaseRec = new copado__Release__c(
-        Name = 'Test Release', copado__Version__c = '2.0'
-    );
-    insert releaseRec;
-}
-
-
-@isTest
-static void testRunSecAPIStatusCheckFail() {
-    // Create test release record
-    copado__Release__c releaseRec = new copado__Release__c(
-        Name = 'Test Release',
-        SecApiScanProjectCounter__c = 1,
-        CurrentScanCount__c = 1,
-        Current_SAST_Run_Status__c = 'IN_PROGRESS',
-        Current_SCA_Run_Status__c = 'PENDING'
-    );
-    insert releaseRec;
-
-    // Mock an HTTP callout failure (Status Code 400)
-    SecApiMockHttpResponseGenerator fakeResponse = new SecApiMockHttpResponseGenerator(400, 'Error', '{}', null);
-    Test.setMock(HttpCalloutMock.class, fakeResponse);
-
-    Test.startTest();
-    try {
-        SecAPIReleaseScanController.runSecAPIStatusCheck('abc', releaseRec.Id);
-    } catch (AuraHandledException e) {
-        System.assert(e.getMessage().contains('Error'), 'Expected error message in exception');
-    }
-    Test.stopTest();
-}
-
-
-
-@AuraEnabled
-    public Static String getSECAPIScoreCard(String scoreCardURL, String userStoryId) {
-        Boolean failScan;
-        String scanType ='';
-        String resp = '';
-        SECAPIParser scparser;
-        SEC_API_Scan_Result__c sr;
-        String endUrl = '/score/'+scoreCardURL;
-        List<copado__User_Story__c> toUpdateUserStories = new List<copado__User_Story__c>();
-        copado__User_Story__c us1 = new copado__User_Story__c();
-        HTTPResponse res = new HTTPResponse();
-        try{
-            res =  getCalloutResponse(endURL,'GET',null);
-            List<SEC_API_Scan_Result__c> srList = getScanResultRecord(userStoryId);
-            if(res.getStatusCode() == 200){
-                scparser = (SECAPIParser)JSON.deserialize(res.getBody(), SECAPIParser.class);
-                if(!srList.isEmpty()){
-                    sr = srList[0];
-                    sr.Critical__c = scparser.critical!=null?Decimal.valueOf(scparser.critical):0;
-                    sr.High__c = scparser.high!=null?Decimal.valueOf(scparser.high):0;
-                    sr.Medium__c = scparser.medium!=null?Decimal.valueOf(scparser.medium):0;
-                    sr.Low__c = scparser.low!=null?Decimal.valueOf(scparser.low):0;
-                    sr.Copado_User_Story__c = userStoryId;
-                    sr.Scan_Type__c = scparser.scanType;
-                    sr.Req_Id__c = scparser.reqId;
-                    if (sr.Critical__c != 0 || sr.High__c != 0 || sr.Medium__c != 0 ) {
-                        sr.FailScan__c = true;
-                    }else {
-                        sr.FailScan__c = false;
-                    }
-                    sr.Scan_Status__c = 'Callout 3 Completed';
-                    if(scparser.lastUpdated != null && scparser.lastUpdated != '')
-                        sr.Last_Updated__c = convertStringtoDateTime(scparser.lastUpdated);
-                    us1 = NEW copado__User_Story__c(Id=userStoryId,SEC_API_Scan_Status__c='Completed');
-                    Boolean scaApplicable = SCARequired(us1.Id);
-                    if(scaApplicable == false){
-                         if(sr.FailScan__c == false  ){
-                     us1.SecAPI_Scan_Passed__c  = true;
-                      }
-                    else{
-                        us1.SecAPI_Scan_Passed__c  = false;
-                   
-                     }
-                     }
-                }
-            }
-            
-            else{
-                if(!srList.isEmpty()){
-                    sr = srList[0];
-                    sr.Scan_Status__c = 'Callout 3 Failed';
-                    sr.Error_Message__c = 'Status Code '+res.getStatusCode() +', Error Message '+res.getBody();
-                    us1 = NEW copado__User_Story__c(Id=userStoryId,SEC_API_Scan_Status__c='Failed');
-                    resp = 'Error occured during 3rd Callout. Response Status Code : ' +res.getStatusCode()+ ', Response Status : ' + res.getStatus()+', Response Message : ' + res.getBody();
-                }
-            }
-            if(sr != null && Schema.sObjectType.SEC_API_Scan_Result__c.isUpdateable()){
-                update sr;
-            }
-           toUpdateUserStories.add(us1);
-            if(!toUpdateUserStories.isEmpty() && Schema.sObjectType.copado__User_Story__c.isUpdateable()){
-                   update toUpdateUserStories;
-            }
-            
-        }catch(Exception e){
-            system.debug('exception '+e +e.getCause()+e.getLineNumber()+e.getMessage());
-            AuraHandledException ae = new AuraHandledException('The string must be at least 5 characters in length');
-            ae.setMessage('Error occured during 3rd Callout. Exception Cause : ' + +e.getCause()+ ' at Line No. ' + e.getLineNumber()+' Error Message : '+e.getMessage());
-            throw ae;
-           
-        }
-        return resp;
-    }
-    
-
-
-@AuraEnabled
-public static boolean SCARequired(String userStoryID) {
-    // Check if the user has access to copado__User_Story__c and its fields
-    if (!Schema.sObjectType.copado__User_Story__c.isAccessible() || 
-        !Schema.sObjectType.copado__User_Story__c.fields.Humana_Org__c.isAccessible()) {
-        throw new AuraHandledException('User does not have access to User Story fields or object.');
-    }
-
-    // Query User Story with security enforced
-    copado__User_Story__c usRecord = [SELECT Humana_Org__c 
-                                      FROM copado__User_Story__c 
-                                      WHERE Id = :userStoryID 
-                                      WITH SECURITY_ENFORCED 
-                                      LIMIT 1];
-
-    if (String.isBlank(usRecord.Humana_Org__c)) {
-        throw new AuraHandledException('Humana_Org__c is blank for the given user story.');
-    }
-
-    // Check if the user has access to SCA_Identifier_for_ORG__mdt metadata type and fields
-    if (!Schema.sObjectType.SCA_Identifier_for_ORG__mdt.isAccessible() || 
-        !Schema.sObjectType.SCA_Identifier_for_ORG__mdt.fields.OrgName__c.isAccessible() || 
-        !Schema.sObjectType.SCA_Identifier_for_ORG__mdt.fields.SCA_required__c.isAccessible()) {
-        throw new AuraHandledException('User does not have access to SCA metadata fields or object.');
-    }
-
-    // Query custom metadata type securely
-    SCA_Identifier_for_ORG__mdt mdtRecord;
-    try {
-        mdtRecord = [SELECT OrgName__c, SCA_required__c 
-                     FROM SCA_Identifier_for_ORG__mdt 
-                     WHERE OrgName__c = :usRecord.Humana_Org__c 
-                     LIMIT 1];
-    } catch (Exception e) {
-        throw new AuraHandledException('Error querying SCA metadata: ' + e.getMessage());
-    }
-
-    // Convert the SCA_required__c field value to Boolean
-    Boolean isSCARequired = Boolean.valueOf(mdtRecord.SCA_required__c);
-    System.debug('SCA Required: ' + isSCARequired);
-
-    // Update User Story if SCA is not required
-    if (!isSCARequired) {
-        copado__User_Story__c us = new copado__User_Story__c(Id = userStoryID, SCA_Scan_Status__c = 'Not Applicable');
-        List<copado__User_Story__c> toUpdateUserStories = new List<copado__User_Story__c> { us };
-
-        if (Schema.sObjectType.copado__User_Story__c.isUpdateable()) {
-            update toUpdateUserStories;
-        }
-    }
-
-    return isSCARequired;
-}
-
-@isTest
-private class SCARequiredTest {
-    
     @testSetup
     static void setupTestData() {
+        // Create a test Copado Integration Setting
+        Copado_Integration_Setting__c cis1 = new Copado_Integration_Setting__c(
+            Name = 'JIRA', 
+            External_System__c = 'JIRA', 
+            Named_Credential__c = 'Test_JIRA'
+        );
+        insert cis1;
+
+        // Create a test Copado Project
+        copado__Project__c pro1 = new copado__Project__c(
+            Name = 'MY JIRA Project',
+            Project_External_Id__c = 'MTP',
+            Copado_Integration_Setting__c = cis1.Id,
+            Enable_Logs__c = true,
+            Workspace_Id__c = 'a404576b-7158-4661-9e93-19be9d8e3025',
+            App_Id__c = 'Test'
+        );
+        insert pro1;
+
         // Create a test User Story with Humana_Org__c
-        copado__User_Story__c usRecord = new copado__User_Story__c(
+        copado__User_Story__c userStory = new copado__User_Story__c(
             Name = 'Test User Story',
             Humana_Org__c = 'TestOrg',
-            SCA_Scan_Status__c = 'Pending'
+            SCA_Scan_Status__c = 'Pending',
+            copado__Project__c = pro1.Id
         );
-        insert usRecord;
+        insert userStory; 
 
         // Create a test metadata record (SCA Identifier)
         SCA_Identifier_for_ORG__mdt mdtRecord = new SCA_Identifier_for_ORG__mdt(
             OrgName__c = 'TestOrg',
-            SCA_required__c = 'true'  // String field, stored as "true"/"false"
+            SCA_required__c = 'true'  // Metadata stores Boolean as a string
         );
         insert mdtRecord;
     }
@@ -212,7 +46,7 @@ private class SCARequiredTest {
 
         // Run the method
         Test.startTest();
-        Boolean result = SCARequired.SCARequired(us.Id);
+        Boolean result = SecAPIScanController.SCARequired(us.Id);
         Test.stopTest();
 
         // Verify the result is TRUE
@@ -231,7 +65,7 @@ private class SCARequiredTest {
 
         // Run the method
         Test.startTest();
-        Boolean result = SCARequired.SCARequired(us.Id);
+        Boolean result = SecAPIScanController.SCARequired(us.Id);
         Test.stopTest();
 
         // Verify the result is FALSE
@@ -254,7 +88,7 @@ private class SCARequiredTest {
         // Run the method expecting an error
         Test.startTest();
         try {
-            SCARequired.SCARequired(usRecord.Id);
+            SecAPIScanController.SCARequired(usRecord.Id);
             System.assert(false, 'Method should have thrown an exception for missing metadata record.');
         } catch (Exception e) {
             System.assert(e.getMessage().contains('Error querying SCA metadata'), 'Expected metadata query error.');
@@ -274,7 +108,7 @@ private class SCARequiredTest {
         // Run the method expecting an error
         Test.startTest();
         try {
-            SCARequired.SCARequired(usRecord.Id);
+            SecAPIScanController.SCARequired(usRecord.Id);
             System.assert(false, 'Method should have thrown an exception for blank Humana_Org__c.');
         } catch (Exception e) {
             System.assert(e.getMessage().contains('Humana_Org__c is blank for the given user story'), 'Expected blank org error.');
