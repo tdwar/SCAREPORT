@@ -25,8 +25,20 @@ public with sharing class SecAPIReleaseScanController {
         Method Name  : getReleaseDetails        
         Function     : Returns release record details for the input release records 
     */
-    
     @AuraEnabled
+    public Static copado__Release__c getReleaseDetails(String releaseId) {
+        string cpuid = EncodingUtil.urlEncode(releaseId, 'UTF-8');
+        if(releaseId != null && Schema.sObjectType.copado__Release__c.isAccessible()){
+            copado__Release__c lstReleaseRecords = new copado__Release__c();
+            lstReleaseRecords = [SELECT Id,Name,OwnerId,SecAPI_Scan_Id__c,SCA_Scan_Id__c, Current_APPSVCID__c,Owner.Name,SCA_Scan_Status__c,SCA_Scan_Passed__c,SEC_API_Scan_Status__c, Current_Glapi_Status__c,SecAPI_Scan_Passed__c,Locked__c,Overall_Security_Scan_Status__c,SecApiScanProjectCounter__c FROM copado__Release__c WHERE Id = :cpuid AND OwnerId != null WITH SECURITY_ENFORCED LIMIT 1];
+            return lstReleaseRecords;
+        }
+        else 
+        throw new AuraHandledException('Users do not have appropriate access');
+        
+        
+    }
+    /*@AuraEnabled
     public Static copado__Release__c getReleaseDetails(String releaseId) {
         try{
             string appReqId = EncodingUtil.urlEncode(releaseId, 'UTF-8');
@@ -51,7 +63,7 @@ public with sharing class SecAPIReleaseScanController {
             throw new AuraHandledException('Error in fetching release details:' + e.getMessage());
         }
         
-    }
+    }*/
 
         
     /*
@@ -534,6 +546,7 @@ public with sharing class SecAPIReleaseScanController {
             
             String unqappid = lstRelease[0].Unique_Appservice_Id__c;
 			List<String> lstunqappid = unqappid.split(',');
+            lstRelease[0].CurrentScanCount__c = 0;
 			//system.debug(lstunqappid[Integer.valueof(lstRelease[0].CurrentScanCount__c)]);
 			system.debug(lstunqappid.size());
             system.debug('Checking Release ID' + releaseId );
@@ -1870,11 +1883,11 @@ public with sharing class SecAPIReleaseScanController {
         }        
         copado__Release__c rl = new copado__Release__c();
         List <copado__Release__c> toUpdateReleases = NEW List<copado__Release__c>();
-       /* if (!Schema.sObjectType.SCA_Identifier_for_ORG__mdt.isAccessible() || 
+       if (!Schema.sObjectType.SCA_Identifier_for_ORG__mdt.isAccessible() || 
             !Schema.sObjectType.SCA_Identifier_for_ORG__mdt.fields.OrgName__c.isAccessible() ||
            !Schema.sObjectType.SCA_Identifier_for_ORG__mdt.fields.SCA_required__c.isAccessible()) {
                 throw new AuraHandledException('User does not have access to required fields or object.');
-            }*/
+            }
        
         SCA_Identifier_for_ORG__mdt mdtRecord = [SELECT OrgName__c, SCA_required__c FROM SCA_Identifier_for_ORG__mdt WHERE OrgName__c = :releaseRecord.Humana_Org__c LIMIT 1];
         system.debug('value of sca - getscavalue method'+ mdtRecord.SCA_required__c);
