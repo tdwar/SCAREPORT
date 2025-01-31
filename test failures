@@ -1,38 +1,43 @@
-@isTest
-static void testSecAPIScan_InvalidUserStory() {
-    Test.startTest();
-    try {
-        SecAPIScanController.secAPIScan(null);
-        System.assert(false, 'Expected an exception for null user story ID');
-    } catch (AuraHandledException e) {
-        System.assert(e.getMessage().contains('User does not have permission'));
-    }
-    Test.stopTest();
-}
-@isTest
-static void testSCAScan_ApiFailure() {
-    List<copado__User_Story__c> usItem = [SELECT Id FROM copado__User_Story__c LIMIT 1];
+if (Schema.sObjectType.Release_Certification_Log__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.Release__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_APPSVCID__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.Status__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_Priority_Callout_Status__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.Callout_Status__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_Priority_Error_Message__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.Azure_Work_Items__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.SNOWTemplate_Id__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.Change_Order_Error_Message__c.isCreateable() &&
+    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_Callout_Status__c.isCreateable()) {
 
-    SecApiMockHttpResponseGenerator fakeResponse = new SecApiMockHttpResponseGenerator(500, 'Error', '{"message": "Internal Server Error"}', null);
-    Test.setMock(HttpCalloutMock.class, fakeResponse);
-    
-    Test.startTest();
-    try {
-        SecAPIScanController.SCAScan(usItem[0].id);
-        System.assert(false, 'Expected an exception for failed API call');
-    } catch (AuraHandledException e) {
-        System.assert(e.getMessage().contains('Error occurred during 1st callout'));
-    }
-    Test.stopTest();
+    lstReleaseLogsToInsert.add(new Release_Certification_Log__c(
+        Id=relLogID, 
+        Release__c=ReleaseId, 
+        SNOW_APPSVCID__c=appSrvID, 
+        Status__c='Active', 
+        SNOW_Priority_Callout_Status__c='Passed', 
+        Callout_Status__c='SNOW Priority Passed', 
+        SNOW_Priority_Error_Message__c='', 
+        Azure_Work_Items__c=MapAppIdWithAzureItems.get(appSrvID).removeStart(','), 
+        SNOWTemplate_Id__c=MapAppIdWithTemplateId.get(appSrvID), 
+        Change_Order_Error_Message__c='', 
+        SNOW_Callout_Status__c=''
+    ));
+} else {
+    throw new AuraHandledException('User does not have permission to create Release_Certification_Log__c records or some fields.');
 }
-@isTest
-static void testGetUserStoryDetails_NoAccess() {
-    Test.startTest();
-    try {
-        SecAPIScanController.getUserStoryDetails('some-invalid-id');
-        System.assert(false, 'Expected an exception due to missing access');
-    } catch (AuraHandledException e) {
-        System.assert(e.getMessage().contains('Users do not have appropriate access'));
-    }
-    Test.stopTest();
-}
+
+
+
+lstReleaseLogsToInsert.add(new Release_Certification_Log__c(
+    Release__c=ReleaseId, 
+    SNOW_APPSVCID__c=appSrvID, 
+    Status__c='Active', 
+    SNOW_Priority_Callout_Status__c='Passed', 
+    Callout_Status__c='SNOW Priority Passed', 
+    SNOW_Priority_Error_Message__c='', 
+    Azure_Work_Items__c=MapAppIdWithAzureItems.get(appSrvID).removeStart(','), 
+    SNOWTemplate_Id__c=MapAppIdWithTemplateId.get(appSrvID), 
+    Change_Order_Error_Message__c='', 
+    SNOW_Callout_Status__c=''
+));
