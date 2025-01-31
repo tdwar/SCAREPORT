@@ -116,3 +116,37 @@ public class SecAPIScanControllerTest {
         Test.stopTest();
     }
 }
+
+
+@isTest
+static void testSCARequired_False() {
+    // Fetch the metadata record safely
+    List<SCA_Identifier_for_ORG__mdt> mdtRecords = [SELECT Id, SCA_required__c FROM SCA_Identifier_for_ORG__mdt WHERE OrgName__c = 'TestOrg' LIMIT 1];
+    
+    // Ensure we have a metadata record
+    System.assert(!mdtRecords.isEmpty(), 'No metadata record found for TestOrg');
+    
+    // Update metadata to set SCA_required__c = false
+    mdtRecords[0].SCA_required__c = 'false';
+    update mdtRecords;
+
+    // Fetch the User Story safely
+    List<copado__User_Story__c> usList = [SELECT Id FROM copado__User_Story__c WHERE Name = 'Test User Story' LIMIT 1];
+
+    // Ensure we have a User Story
+    System.assert(!usList.isEmpty(), 'No User Story found for Test User Story');
+
+    // Run the method
+    Test.startTest();
+    Boolean result = SecAPIScanController.SCARequired(usList[0].Id);
+    Test.stopTest();
+
+    // Verify the result is FALSE
+    System.assertEquals(false, result, 'SCARequired should return false');
+
+    // Verify User Story status was updated
+    List<copado__User_Story__c> updatedUSList = [SELECT SCA_Scan_Status__c FROM copado__User_Story__c WHERE Id = :usList[0].Id];
+    
+    System.assert(!updatedUSList.isEmpty(), 'Updated User Story not found');
+    System.assertEquals('Not Applicable', updatedUSList[0].SCA_Scan_Status__c, 'SCA Scan Status should be "Not Applicable"');
+}
