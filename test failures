@@ -128,3 +128,58 @@ static void testRunSecAPIStatusCheckFail() {
         return resp;
     }
     
+
+
+@AuraEnabled
+public static boolean SCARequired(String userStoryID) {
+    // Check if the user has access to copado__User_Story__c and its fields
+    if (!Schema.sObjectType.copado__User_Story__c.isAccessible() || 
+        !Schema.sObjectType.copado__User_Story__c.fields.Humana_Org__c.isAccessible()) {
+        throw new AuraHandledException('User does not have access to User Story fields or object.');
+    }
+
+    // Query User Story with security enforced
+    copado__User_Story__c usRecord = [SELECT Humana_Org__c 
+                                      FROM copado__User_Story__c 
+                                      WHERE Id = :userStoryID 
+                                      WITH SECURITY_ENFORCED 
+                                      LIMIT 1];
+
+    if (String.isBlank(usRecord.Humana_Org__c)) {
+        throw new AuraHandledException('Humana_Org__c is blank for the given user story.');
+    }
+
+    // Check if the user has access to SCA_Identifier_for_ORG__mdt metadata type and fields
+    if (!Schema.sObjectType.SCA_Identifier_for_ORG__mdt.isAccessible() || 
+        !Schema.sObjectType.SCA_Identifier_for_ORG__mdt.fields.OrgName__c.isAccessible() || 
+        !Schema.sObjectType.SCA_Identifier_for_ORG__mdt.fields.SCA_required__c.isAccessible()) {
+        throw new AuraHandledException('User does not have access to SCA metadata fields or object.');
+    }
+
+    // Query custom metadata type securely
+    SCA_Identifier_for_ORG__mdt mdtRecord;
+    try {
+        mdtRecord = [SELECT OrgName__c, SCA_required__c 
+                     FROM SCA_Identifier_for_ORG__mdt 
+                     WHERE OrgName__c = :usRecord.Humana_Org__c 
+                     LIMIT 1];
+    } catch (Exception e) {
+        throw new AuraHandledException('Error querying SCA metadata: ' + e.getMessage());
+    }
+
+    // Convert the SCA_required__c field value to Boolean
+    Boolean isSCARequired = Boolean.valueOf(mdtRecord.SCA_required__c);
+    System.debug('SCA Required: ' + isSCARequired);
+
+    // Update User Story if SCA is not required
+    if (!isSCARequired) {
+        copado__User_Story__c us = new copado__User_Story__c(Id = userStoryID, SCA_Scan_Status__c = 'Not Applicable');
+        List<copado__User_Story__c> toUpdateUserStories = new List<copado__User_Story__c> { us };
+
+        if (Schema.sObjectType.copado__User_Story__c.isUpdateable()) {
+            update toUpdateUserStories;
+        }
+    }
+
+    return isSCARequired;
+}
