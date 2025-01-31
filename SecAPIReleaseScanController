@@ -4,6 +4,12 @@ if (!lstSecScanResults.isEmpty() && Schema.sObjectType.SEC_API_Scan_Result__c.is
     throw new AuraHandledException('Error: Insufficient permissions to update SEC_API_Scan_Result__c records.');
 }
 
+if (!String.isEmpty(recordId)) {
+    SEC_API_Scan_Result__c existingScan = [SELECT Id FROM SEC_API_Scan_Result__c WHERE Id = :recordId LIMIT 1];
+    sr.Id = existingScan.Id;
+} else {
+    throw new AuraHandledException('Error: Invalid SEC_API_Scan_Result__c recordId.');
+}
 
 
 /******************************************************************************************************************************
