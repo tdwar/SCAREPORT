@@ -1,43 +1,32 @@
-if (Schema.sObjectType.Release_Certification_Log__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.Release__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_APPSVCID__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.Status__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_Priority_Callout_Status__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.Callout_Status__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_Priority_Error_Message__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.Azure_Work_Items__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.SNOWTemplate_Id__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.Change_Order_Error_Message__c.isCreateable() &&
-    Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_Callout_Status__c.isCreateable()) {
-
-    lstReleaseLogsToInsert.add(new Release_Certification_Log__c(
-        Id=relLogID, 
-        Release__c=ReleaseId, 
-        SNOW_APPSVCID__c=appSrvID, 
-        Status__c='Active', 
-        SNOW_Priority_Callout_Status__c='Passed', 
-        Callout_Status__c='SNOW Priority Passed', 
-        SNOW_Priority_Error_Message__c='', 
-        Azure_Work_Items__c=MapAppIdWithAzureItems.get(appSrvID).removeStart(','), 
-        SNOWTemplate_Id__c=MapAppIdWithTemplateId.get(appSrvID), 
-        Change_Order_Error_Message__c='', 
-        SNOW_Callout_Status__c=''
-    ));
-} else {
-    throw new AuraHandledException('User does not have permission to create Release_Certification_Log__c records or some fields.');
+if (!appServiceUserStoriesMap.isEmpty()) {
+    for (String str : appServiceUserStoriesMap.keySet()) {
+        if (String.isNotEmpty(str)) {
+            // Check if all fields are createable before adding the record
+            if (
+                Schema.sObjectType.Release_Certification_Log__c.isCreateable() &&
+                Schema.sObjectType.Release_Certification_Log__c.fields.Release__c.isCreateable() &&
+                Schema.sObjectType.Release_Certification_Log__c.fields.SNOW_APPSVCID__c.isCreateable() &&
+                Schema.sObjectType.Release_Certification_Log__c.fields.Status__c.isCreateable() &&
+                Schema.sObjectType.Release_Certification_Log__c.fields.SNOWTemplate_Id__c.isCreateable() &&
+                Schema.sObjectType.Release_Certification_Log__c.fields.Callout_Status__c.isCreateable() &&
+                Schema.sObjectType.Release_Certification_Log__c.fields.Azure_Work_Items__c.isCreateable()
+            ) {
+                lstRCL.add(new Release_Certification_Log__c(
+                    Release__c = releaseId,
+                    SNOW_APPSVCID__c = str,
+                    Status__c = 'Active',
+                    SNOWTemplate_Id__c = MapAppIdWithTemplateId.get(str),
+                    Callout_Status__c = 'Build Id Generation Passed',
+                    Azure_Work_Items__c = MapAppIdWithAzureItems.get(str).removeStart(',')
+                ));
+            } else {
+                System.debug('FLS error: Missing create permissions on some fields in Release_Certification_Log__c.');
+            }
+        }
+    }
 }
 
-
-
-lstReleaseLogsToInsert.add(new Release_Certification_Log__c(
-    Release__c=ReleaseId, 
-    SNOW_APPSVCID__c=appSrvID, 
-    Status__c='Active', 
-    SNOW_Priority_Callout_Status__c='Passed', 
-    Callout_Status__c='SNOW Priority Passed', 
-    SNOW_Priority_Error_Message__c='', 
-    Azure_Work_Items__c=MapAppIdWithAzureItems.get(appSrvID).removeStart(','), 
-    SNOWTemplate_Id__c=MapAppIdWithTemplateId.get(appSrvID), 
-    Change_Order_Error_Message__c='', 
-    SNOW_Callout_Status__c=''
-));
+// Check again before insert to ensure the list is not empty
+if (!lstRCL.isEmpty() && Schema.sObjectType.Release_Certification_Log__c.isCreateable()) {
+    insert lstRCL;
+}
