@@ -183,3 +183,102 @@ public static boolean SCARequired(String userStoryID) {
 
     return isSCARequired;
 }
+
+@isTest
+private class SCARequiredTest {
+    
+    @testSetup
+    static void setupTestData() {
+        // Create a test User Story with Humana_Org__c
+        copado__User_Story__c usRecord = new copado__User_Story__c(
+            Name = 'Test User Story',
+            Humana_Org__c = 'TestOrg',
+            SCA_Scan_Status__c = 'Pending'
+        );
+        insert usRecord;
+
+        // Create a test metadata record (SCA Identifier)
+        SCA_Identifier_for_ORG__mdt mdtRecord = new SCA_Identifier_for_ORG__mdt(
+            OrgName__c = 'TestOrg',
+            SCA_required__c = 'true'  // String field, stored as "true"/"false"
+        );
+        insert mdtRecord;
+    }
+
+    @isTest
+    static void testSCARequired_True() {
+        // Get the inserted User Story
+        copado__User_Story__c us = [SELECT Id FROM copado__User_Story__c WHERE Name = 'Test User Story' LIMIT 1];
+
+        // Run the method
+        Test.startTest();
+        Boolean result = SCARequired.SCARequired(us.Id);
+        Test.stopTest();
+
+        // Verify the result is TRUE
+        System.assertEquals(true, result, 'SCARequired should return true');
+    }
+
+    @isTest
+    static void testSCARequired_False() {
+        // Update metadata record to set SCA_required__c = false
+        SCA_Identifier_for_ORG__mdt mdtRecord = [SELECT Id FROM SCA_Identifier_for_ORG__mdt WHERE OrgName__c = 'TestOrg' LIMIT 1];
+        mdtRecord.SCA_required__c = 'false';
+        update mdtRecord;
+
+        // Get the User Story
+        copado__User_Story__c us = [SELECT Id FROM copado__User_Story__c WHERE Name = 'Test User Story' LIMIT 1];
+
+        // Run the method
+        Test.startTest();
+        Boolean result = SCARequired.SCARequired(us.Id);
+        Test.stopTest();
+
+        // Verify the result is FALSE
+        System.assertEquals(false, result, 'SCARequired should return false');
+
+        // Verify User Story status was updated
+        copado__User_Story__c updatedUS = [SELECT SCA_Scan_Status__c FROM copado__User_Story__c WHERE Id = :us.Id];
+        System.assertEquals('Not Applicable', updatedUS.SCA_Scan_Status__c, 'SCA Scan Status should be "Not Applicable"');
+    }
+
+    @isTest
+    static void testSCARequired_NoMetadataRecord() {
+        // Create a User Story with a different Humana_Org__c that has no metadata record
+        copado__User_Story__c usRecord = new copado__User_Story__c(
+            Name = 'No Metadata User Story',
+            Humana_Org__c = 'UnknownOrg'
+        );
+        insert usRecord;
+
+        // Run the method expecting an error
+        Test.startTest();
+        try {
+            SCARequired.SCARequired(usRecord.Id);
+            System.assert(false, 'Method should have thrown an exception for missing metadata record.');
+        } catch (Exception e) {
+            System.assert(e.getMessage().contains('Error querying SCA metadata'), 'Expected metadata query error.');
+        }
+        Test.stopTest();
+    }
+
+    @isTest
+    static void testSCARequired_BlankHumanaOrg() {
+        // Create a User Story with blank Humana_Org__c
+        copado__User_Story__c usRecord = new copado__User_Story__c(
+            Name = 'Blank Org User Story',
+            Humana_Org__c = ''
+        );
+        insert usRecord;
+
+        // Run the method expecting an error
+        Test.startTest();
+        try {
+            SCARequired.SCARequired(usRecord.Id);
+            System.assert(false, 'Method should have thrown an exception for blank Humana_Org__c.');
+        } catch (Exception e) {
+            System.assert(e.getMessage().contains('Humana_Org__c is blank for the given user story'), 'Expected blank org error.');
+        }
+        Test.stopTest();
+    }
+}
